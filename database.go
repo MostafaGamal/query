@@ -25,7 +25,7 @@ func OpenDatabase(opts map[string]string) error {
 		database = &adapters.SqliteAdapter{}
 	case "mysql":
 		database = &adapters.MysqlAdapter{}
-	case "postgres":
+	case "pgx":
 		database = &adapters.PostgresqlAdapter{}
 	default:
 		database = nil // fail
@@ -81,4 +81,8 @@ func TimeString(t time.Time) string {
 		return database.TimeString(t)
 	}
 	return ""
+}
+
+func GetSQLDB() *sql.DB {
+	return database.SQLDB()
 }

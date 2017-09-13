@@ -3,9 +3,10 @@ package adapters
 import (
 	"database/sql"
 	"fmt"
-
 	// psql driver
-	_ "github.com/lib/pq"
+	//_ "github.com/lib/pq"
+	//"github.com/jackc/pgx/pgtype"
+	//"github.com/jackc/pgx/stdlib"
 )
 
 // PostgresqlAdapter conforms to the query.Database interface
@@ -24,13 +25,14 @@ func (db *PostgresqlAdapter) Open(opts map[string]string) error {
 
 	db.debug = false
 	db.options = map[string]string{
-		"adapter":  "postgres",
+		"adapter":  "pgx",
 		"user":     "",
 		"password": "",
 		"db":       "",
-		"host":     "localhost",                          // for unix instead of tcp use path - see driver
-		"port":     "5432",                               // default PSQL port
-		"params":   "sslmode=disable connect_timeout=60", // disable sslmode for localhost, set timeout
+		"host":     "localhost", // for unix instead of tcp use path - see driver
+		"port":     "5432",      // default PSQL port
+		//"params":   "sslmode=disable connect_timeout=60", // disable sslmode for localhost, set timeout
+		"params": "sslmode=disable", // disable sslmode for localhost, set timeout
 	}
 
 	if opts["debug"] == "true" {
@@ -68,6 +70,15 @@ func (db *PostgresqlAdapter) Open(opts map[string]string) error {
 	if db.sqlDB != nil && db.debug {
 		fmt.Printf("Database %s opened using %s\n", db.options["db"], db.options["adapter"])
 	}
+
+	/*var myvartest pgtype.JSONB
+	var myVar map[string]interface{}
+	myVar = make(map[string]interface{}, 0)
+	myconn, _ := stdlib.AcquireConn(db.sqlDB)
+	myRow := myconn.QueryRow("SELECT components FROM pages WHERE id = 13")
+	myRow.Scan(&myvartest)
+	myVar = myvartest.Get().(map[string]interface{})
+	println(len(myVar))*/
 
 	return nil
 
