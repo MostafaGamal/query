@@ -7,6 +7,7 @@ package query
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -772,6 +773,11 @@ func scanRow(cols []string, rows *sql.Rows) (Result, error) {
 		return nil, fmt.Errorf("Error scanning row: %s", err)
 	}
 
+	columnTypes, err := rows.ColumnTypes()
+	if err != nil {
+		return nil, fmt.Errorf("Error retrieving column types: %s", err)
+	}
+
 	// Make a string => interface map and hand off to caller
 	// We fix up a few types which the pq driver returns as less handy equivalents
 	// We enforce usage of int64 at all times as all our records use int64
@@ -786,7 +792,20 @@ func scanRow(cols []string, rows *sql.Rows) (Result, error) {
 			case int:
 				result[cols[i]] = int64(v.(int))
 			case []byte: // text cols are given as bytes
-				result[cols[i]] = string(v.([]byte))
+				if columnTypes[i].DatabaseTypeName() == "JSONB" ||
+					columnTypes[i].DatabaseTypeName() == "JSON" {
+					var data interface{}
+					err := json.Unmarshal(v.([]byte), &data)
+					if err == nil {
+						result[cols[i]] = data
+					} else {
+						return nil, fmt.Errorf("Error converting data '%s' to json: %s",
+							string(v.([]byte)),
+							err)
+					}
+				} else {
+					result[cols[i]] = string(v.([]byte))
+				}
 			case int64:
 				result[cols[i]] = v.(int64)
 			}
