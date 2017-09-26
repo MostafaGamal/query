@@ -773,7 +773,10 @@ func scanRow(cols []string, rows *sql.Rows) (Result, error) {
 		return nil, fmt.Errorf("Error scanning row: %s", err)
 	}
 
-	columnTypes, _ := rows.ColumnTypes()
+	columnTypes, err := rows.ColumnTypes()
+	if err != nil {
+		return nil, fmt.Errorf("Error retrieving column types: %s", err)
+	}
 
 	// Make a string => interface map and hand off to caller
 	// We fix up a few types which the pq driver returns as less handy equivalents
@@ -789,13 +792,16 @@ func scanRow(cols []string, rows *sql.Rows) (Result, error) {
 			case int:
 				result[cols[i]] = int64(v.(int))
 			case []byte: // text cols are given as bytes
-				if columnTypes[i].DatabaseTypeName() == "JSONB" || columnTypes[i].DatabaseTypeName() == "JSON" {
-					var inter interface{}
-					err := json.Unmarshal(v.([]byte), &inter)
-					if err != nil {
-						result[cols[i]] = err.Error()
+				if columnTypes[i].DatabaseTypeName() == "JSONB" ||
+					columnTypes[i].DatabaseTypeName() == "JSON" {
+					var data interface{}
+					err := json.Unmarshal(v.([]byte), &data)
+					if err == nil {
+						result[cols[i]] = data
 					} else {
-						result[cols[i]] = inter
+						return nil, fmt.Errorf("Error converting data '%s' to json: %s",
+							string(v.([]byte)),
+							err)
 					}
 				} else {
 					result[cols[i]] = string(v.([]byte))
